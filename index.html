@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Prompt Tester</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-warm: #f5f3ef;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6b6b6b;
+            --text-muted: #9a9a9a;
+            --accent: #e85d24;
+            --accent-hover: #d14d18;
+            --border: #e5e2dc;
+            --border-light: #eeebe6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-warm);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        .page-wrapper { min-height: 100vh; position: relative; overflow: hidden; }
+
+        .radial-decoration {
+            position: fixed;
+            bottom: -120px;
+            left: -80px;
+            width: 400px;
+            height: 400px;
+            pointer-events: none;
+            opacity: 0.7;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header { margin-bottom: 50px; }
+
+        .header-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            letter-spacing: 0.02em;
+        }
+
+        .header-tag::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        h1 {
+            font-family: 'Instrument Serif', serif;
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 400;
+            color: var(--text-primary);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 60px;
+            align-items: start;
+        }
+
+        @media (max-width: 1000px) {
+            .main-grid { grid-template-columns: 1fr; gap: 40px; }
+        }
+
+        .config-panel { position: sticky; top: 40px; }
+
+        .form-group { margin-bottom: 16px; }
+
+        .form-row { display: flex; gap: 16px; align-items: flex-end; }
+
+        .form-group-inline { flex: 1; margin-bottom: 0; }
+
+        .form-group-inline .checkbox-label { padding: 14px 0; }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 0.02em;
+        }
+
+        select, input[type="number"], input[type="password"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="password"] { font-family: monospace; }
+
+        select {
+            appearance: none;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 44px;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(232, 93, 36, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .prompt-wrapper { position: relative; }
+        .prompt-wrapper textarea { padding-right: 52px; }
+
+        .magic-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .magic-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(232, 93, 36, 0.05);
+        }
+
+        .magic-btn:disabled { opacity: 0.7; cursor: wait; }
+
+        .btn-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            width: 100%;
+        }
+
+        .btn-primary { background: var(--text-primary); color: var(--bg-card); }
+        .btn-primary:hover { background: #333; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .results-section { display: flex; flex-direction: column; gap: 20px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 800px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+        }
+
+        .stat-value {
+            font-family: 'Instrument Serif', serif;
+            font-size: 2rem;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chart-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
+        }
+
+        .chart-panel h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .chart-container { position: relative; height: 320px; }
+
+        .table-panel {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-light);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: var(--text-primary);
+        }
+
+        .export-btns { display: flex; gap: 8px; }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small:hover {
+            border-color: var(--text-primary);
+            background: var(--text-primary);
+            color: var(--bg-card);
+        }
+
+        .results-table-container { max-height: 280px; overflow-y: auto; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        th {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            background: var(--bg-card);
+        }
+
+        td { font-size: 14px; color: var(--text-primary); }
+
+        .response-cell {
+            max-width: 300px;
+            word-wrap: break-word;
+            font-family: 'DM Sans', monospace;
+        }
+
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+            padding: 0 10px;
+            background: var(--bg-warm);
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 80px 40px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+        }
+
+        .loading.active { display: block; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .progress-text { color: var(--text-secondary); font-size: 14px; }
+
+        .hidden { display: none !important; }
+
+        .placeholder-state {
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .placeholder-state p { color: var(--text-muted); font-size: 14px; }
+
+        .api-keys-section {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
+        }
+
+        .api-keys-section h3 {
+            font-family: 'Instrument Serif', serif;
+            font-size: 1rem;
+            font-weight: 400;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .api-key-row { display: flex; gap: 12px; margin-bottom: 12px; }
+        .api-key-row:last-child { margin-bottom: 0; }
+        .api-key-row .form-group { flex: 1; margin-bottom: 0; }
+
+        .key-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border);
+            margin-top: 42px;
+        }
+
+        .key-status.valid { background: #22c55e; }
+        .key-status.invalid { background: #ef4444; }
+
+        .help-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="radial-decoration">
+            <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g stroke="#1a1a1a" stroke-width="0.5" opacity="0.4" id="radialLines"></g>
+                <circle cx="200" cy="200" r="180" stroke="#1a1a1a" stroke-width="0.5" fill="none" opacity="0.3"/>
+                <circle cx="200" cy="200" r="120" stroke="#1a1a1a" stroke-width="0.5" fill="none" opacity="0.2"/>
+                <circle cx="200" cy="200" r="60" stroke="#1a1a1a" stroke-width="0.5" fill="none" opacity="0.1"/>
+            </svg>
+        </div>
+
+        <div class="container">
+            <header class="header">
+                <div class="header-tag">Prompt Testing</div>
+                <h1>LLM Response<br>Consistency Tester</h1>
+            </header>
+
+            <div class="main-grid">
+                <div class="config-panel">
+                    <div class="api-keys-section">
+                        <h3>API Keys</h3>
+                        <div class="api-key-row">
+                            <div class="form-group">
+                                <label for="openaiKey">OpenAI API Key</label>
+                                <input type="password" id="openaiKey" placeholder="sk-...">
+                            </div>
+                            <div class="key-status" id="openaiStatus"></div>
+                        </div>
+                        <div class="api-key-row">
+                            <div class="form-group">
+                                <label for="anthropicKey">Anthropic API Key</label>
+                                <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+                            </div>
+                            <div class="key-status" id="anthropicStatus"></div>
+                        </div>
+                        <p class="help-text">Keys are stored locally in your browser only.</p>
+                    </div>
+
+                    <form id="testForm">
+                        <div class="form-group">
+                            <label for="model">Model</label>
+                            <select id="model" name="model">
+                                <optgroup label="OpenAI - GPT-4.1">
+                                    <option value="gpt-4.1">GPT-4.1</option>
+                                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                                    <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                                </optgroup>
+                                <optgroup label="OpenAI - GPT-4">
+                                    <option value="gpt-4o">GPT-4o</option>
+                                    <option value="gpt-4o-mini" selected>GPT-4o Mini</option>
+                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="gpt-4">GPT-4</option>
+                                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                </optgroup>
+                                <optgroup label="OpenAI - o-Series">
+                                    <option value="o3">o3</option>
+                                    <option value="o3-mini">o3 Mini</option>
+                                    <option value="o4-mini">o4 Mini</option>
+                                    <option value="o1">o1</option>
+                                    <option value="o1-mini">o1 Mini</option>
+                                </optgroup>
+                                <optgroup label="Anthropic - Claude 4">
+                                    <option value="claude-sonnet-4-20250514">Claude Sonnet 4</option>
+                                    <option value="claude-haiku-4-20250514">Claude Haiku 4</option>
+                                </optgroup>
+                                <optgroup label="Anthropic - Claude 3.5">
+                                    <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+                                    <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="prompt">Prompt</label>
+                            <div class="prompt-wrapper">
+                                <textarea id="prompt" name="prompt" rows="3" placeholder="e.g., What is the best type of cheese?" required></textarea>
+                                <button type="button" class="magic-btn" onclick="enhancePrompt()" title="Enhance for one-word answers">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
+                                        <circle cx="15" cy="9" r="3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group-inline">
+                                <label for="iterations">Iterations</label>
+                                <input type="number" id="iterations" name="iterations" value="10" min="1" max="100" required>
+                            </div>
+                            <div class="form-group form-group-inline">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="first_word_only">
+                                    First word only
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="submitBtn">Run Test</button>
+                    </form>
+                </div>
+
+                <div class="results-section">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p class="progress-text" id="progressText">Running prompt tests...</p>
+                    </div>
+
+                    <div id="placeholderState" class="placeholder-state">
+                        <p>Configure your test and click "Run Test" to see results</p>
+                    </div>
+
+                    <div id="resultsContainer" class="hidden">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotal">-</div>
+                                <div class="stat-label">Total Runs</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statUnique">-</div>
+                                <div class="stat-label">Unique</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statConsistency">-</div>
+                                <div class="stat-label">Consistency</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statMostCommon">-</div>
+                                <div class="stat-label">Top Response</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-panel">
+                            <h3>Response Distribution</h3>
+                            <div class="chart-container">
+                                <canvas id="resultsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="table-panel">
+                            <div class="table-header">
+                                <h3>Response Details</h3>
+                                <div class="export-btns">
+                                    <button class="btn-small" onclick="exportCSV()">Export CSV</button>
+                                    <button class="btn-small" onclick="exportJSON()">Export JSON</button>
+                                </div>
+                            </div>
+                            <div class="results-table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Response</th>
+                                            <th>Count</th>
+                                            <th>Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Generate radial lines
+        const radialLines = document.getElementById('radialLines');
+        for (let i = 0; i < 80; i++) {
+            const angle = (i * 2.25) * Math.PI / 180;
+            const x2 = 200 + Math.cos(angle) * 180;
+            const y2 = 200 + Math.sin(angle) * 180;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '200');
+            line.setAttribute('y1', '200');
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            radialLines.appendChild(line);
+        }
+
+        let chart = null;
+        let lastResults = null;
+
+        // Load saved API keys
+        document.getElementById('openaiKey').value = localStorage.getItem('openaiKey') || '';
+        document.getElementById('anthropicKey').value = localStorage.getItem('anthropicKey') || '';
+        updateKeyStatus();
+
+        // Save API keys on change
+        document.getElementById('openaiKey').addEventListener('input', (e) => {
+            localStorage.setItem('openaiKey', e.target.value);
+            updateKeyStatus();
+        });
+        document.getElementById('anthropicKey').addEventListener('input', (e) => {
+            localStorage.setItem('anthropicKey', e.target.value);
+            updateKeyStatus();
+        });
+
+        function updateKeyStatus() {
+            const openaiKey = document.getElementById('openaiKey').value;
+            const anthropicKey = document.getElementById('anthropicKey').value;
+            document.getElementById('openaiStatus').className = 'key-status' + (openaiKey.startsWith('sk-') ? ' valid' : '');
+            document.getElementById('anthropicStatus').className = 'key-status' + (anthropicKey.startsWith('sk-ant-') ? ' valid' : '');
+        }
+
+        function isOpenAIModel(model) {
+            return model.startsWith('gpt-') || model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
+        }
+
+        async function callOpenAI(apiKey, model, prompt) {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'system', content: 'You are a helpful assistant. Follow the user\'s instructions precisely. Be concise.' },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 1
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.choices[0].message.content.trim();
+        }
+
+        async function callAnthropic(apiKey, model, prompt) {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'anthropic-dangerous-direct-browser-access': 'true'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    max_tokens: 1024,
+                    messages: [{ role: 'user', content: prompt }],
+                    system: 'You are a helpful assistant. Follow the user\'s instructions precisely. Be concise.',
+                    temperature: 1
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.content[0].text.trim();
+        }
+
+        async function enhancePrompt() {
+            const promptEl = document.getElementById('prompt');
+            const btn = document.querySelector('.magic-btn');
+            const openaiKey = document.getElementById('openaiKey').value;
+            let prompt = promptEl.value.trim();
+
+            if (!prompt) {
+                promptEl.placeholder = 'Enter a prompt first, then click to enhance';
+                return;
+            }
+
+            if (!openaiKey) {
+                alert('Please enter your OpenAI API key first');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="btn-spinner"></div>';
+
+            try {
+                const response = await callOpenAI(openaiKey, 'gpt-4o-mini', `You add constraints to prompts to ensure the model gives a genuine one-word answer.
+
+Your job:
+1. Keep the original question exactly as-is
+2. Add a brief instruction at the end that:
+   - Requires a one-word answer
+   - Specifies what TYPE of word is expected (e.g., "must be a cheese name", "must be a country", "must be a color")
+   - Prevents cop-out answers like "subjective", "impossible", "depends", "none", etc.
+
+Examples:
+- "What's the best cheese?" → "What's the best cheese? Answer with one word. Your answer must be the name of an actual cheese."
+- "What color is the sky?" → "What color is the sky? Answer with one word. Your answer must be a color."
+
+Output ONLY the enhanced prompt, nothing else.
+
+Prompt to enhance: ${prompt}`);
+
+                promptEl.value = response;
+                btn.style.color = 'var(--accent)';
+                btn.style.borderColor = 'var(--accent)';
+                setTimeout(() => {
+                    btn.style.color = '';
+                    btn.style.borderColor = '';
+                }, 500);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
+                    <circle cx="15" cy="9" r="3"/>
+                </svg>`;
+            }
+        }
+
+        function normalizeResponse(text, firstWordOnly) {
+            let result = text.trim().toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
+            if (firstWordOnly) {
+                result = result.split(/\s+/)[0] || result;
+                result = result.replace(/^[^\w]+|[^\w]+$/g, '');
+            }
+            return result;
+        }
+
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const model = document.getElementById('model').value;
+            const prompt = document.getElementById('prompt').value;
+            const iterations = parseInt(document.getElementById('iterations').value);
+            const firstWordOnly = document.getElementById('first_word_only').checked;
+
+            const isOpenAI = isOpenAIModel(model);
+            const apiKey = isOpenAI
+                ? document.getElementById('openaiKey').value
+                : document.getElementById('anthropicKey').value;
+
+            if (!apiKey) {
+                alert(`Please enter your ${isOpenAI ? 'OpenAI' : 'Anthropic'} API key`);
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const progressText = document.getElementById('progressText');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const placeholderState = document.getElementById('placeholderState');
+
+            submitBtn.disabled = true;
+            loading.classList.add('active');
+            resultsContainer.classList.add('hidden');
+            placeholderState.classList.add('hidden');
+
+            const results = [];
+            const callFn = isOpenAI ? callOpenAI : callAnthropic;
+
+            // Run requests in parallel batches of 5
+            const batchSize = 5;
+            for (let i = 0; i < iterations; i += batchSize) {
+                const batch = [];
+                for (let j = i; j < Math.min(i + batchSize, iterations); j++) {
+                    batch.push(
+                        callFn(apiKey, model, prompt)
+                            .then(r => normalizeResponse(r, firstWordOnly))
+                            .catch(err => `[ERROR: ${err.message}]`)
+                    );
+                }
+                const batchResults = await Promise.all(batch);
+                results.push(...batchResults);
+                progressText.textContent = `Running... ${results.length}/${iterations}`;
+            }
+
+            // Calculate stats
+            const counts = {};
+            results.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+
+            const labels = Object.keys(counts);
+            const values = Object.values(counts);
+            const maxCount = Math.max(...values);
+            const mostCommon = labels[values.indexOf(maxCount)];
+
+            const data = {
+                results,
+                chart_data: { labels, values },
+                stats: {
+                    total: results.length,
+                    unique: labels.length,
+                    most_common: mostCommon,
+                    most_common_count: maxCount,
+                    consistency: Math.round((maxCount / results.length) * 1000) / 10
+                }
+            };
+
+            displayResults(data);
+            submitBtn.disabled = false;
+            loading.classList.remove('active');
+        });
+
+        function displayResults(data) {
+            lastResults = data;
+            document.getElementById('resultsContainer').classList.remove('hidden');
+            document.getElementById('statTotal').textContent = data.stats.total;
+            document.getElementById('statUnique').textContent = data.stats.unique;
+            document.getElementById('statConsistency').textContent = data.stats.consistency + '%';
+            document.getElementById('statMostCommon').textContent = truncateText(data.stats.most_common, 12);
+            updateChart(data.chart_data);
+            updateTable(data.chart_data, data.stats.total);
+        }
+
+        function truncateText(text, maxLength) {
+            return text.length <= maxLength ? text : text.substring(0, maxLength) + '...';
+        }
+
+        function updateChart(chartData) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            if (chart) chart.destroy();
+
+            const colors = generateColors(chartData.labels.length);
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels.map(l => truncateText(l, 30)),
+                    datasets: [{
+                        label: 'Response Count',
+                        data: chartData.values,
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1a1a1a',
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                title: (ctx) => chartData.labels[ctx[0].dataIndex]
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, color: '#9a9a9a' },
+                            grid: { color: '#eeebe6' }
+                        },
+                        x: {
+                            ticks: { color: '#9a9a9a', maxRotation: 45, minRotation: 45 },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTable(chartData, total) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            const sorted = chartData.labels.map((l, i) => ({ label: l, count: chartData.values[i] }))
+                .sort((a, b) => b.count - a.count);
+
+            sorted.forEach(item => {
+                const pct = ((item.count / total) * 100).toFixed(1);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="response-cell">${escapeHtml(item.label)}</td>
+                    <td><span class="count-badge">${item.count}</span></td>
+                    <td>${pct}%</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function generateColors(count) {
+            const base = [
+                { bg: 'rgba(232, 93, 36, 0.8)', border: '#e85d24' },
+                { bg: 'rgba(26, 26, 26, 0.7)', border: '#1a1a1a' },
+                { bg: 'rgba(107, 107, 107, 0.6)', border: '#6b6b6b' },
+                { bg: 'rgba(154, 154, 154, 0.5)', border: '#9a9a9a' },
+            ];
+            return {
+                background: Array.from({ length: count }, (_, i) => base[i % base.length].bg),
+                border: Array.from({ length: count }, (_, i) => base[i % base.length].border)
+            };
+        }
+
+        function exportCSV() {
+            if (!lastResults) return;
+            const rows = [['Response', 'Count', 'Percentage']];
+            lastResults.chart_data.labels.forEach((label, i) => {
+                const count = lastResults.chart_data.values[i];
+                const pct = ((count / lastResults.stats.total) * 100).toFixed(1);
+                rows.push([`"${label.replace(/"/g, '""')}"`, count, pct + '%']);
+            });
+            downloadFile(rows.map(r => r.join(',')).join('\n'), 'llm-test-results.csv', 'text/csv');
+        }
+
+        function exportJSON() {
+            if (!lastResults) return;
+            downloadFile(JSON.stringify(lastResults, null, 2), 'llm-test-results.json', 'application/json');
+        }
+
+        function downloadFile(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+    </script>
+</body>
+</html>
