@@ -33,7 +33,11 @@ Self-contained HTML/CSS/JS, no external JS dependencies (Chart.js was removed). 
 - **Home state**: centered hero + chatbox + suggestion chips
 - **Conversation state**: scrollable thread with user bubbles (orange, right-aligned) and assistant response bubbles (gray, left-aligned) with frequency bars
 
-State is in-memory (`state.conversations[]` array). Settings (iterations, first-word-only) live in a popover above the chatbox. Two separate textareas for home/conversation states, synced settings.
+State is in-memory (`state.conversations[]` array). Two separate textareas for home/conversation states, synced settings.
+
+Toolbar has a "+" button that opens a dropdown menu (`togglePlusMenu()`) with "Enhance prompt" and "Settings" items. Settings opens a separate popover (`openSettings()`). All popovers close via `closeAllPopovers()`. The plus-menu lives inside `.chatbox-toolbar` (which has `position: relative`) for correct positioning.
+
+Response frequency bars use CSS grid on `.results-message` (`grid-template-columns: auto 1fr auto`) with `display: contents` on `.response-row` so all response labels in a group share one auto-sized column, keeping bars aligned regardless of label text length.
 
 ## Key Patterns
 

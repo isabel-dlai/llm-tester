@@ -233,7 +233,18 @@
         }
 
         .toolbar-btn .btn-label {
-            display: inline;
+            display: inline-block;
+            max-width: 0;
+            overflow: hidden;
+            vertical-align: middle;
+            transition: max-width 0.3s ease, opacity 0.3s ease;
+            opacity: 0;
+            white-space: nowrap;
+        }
+
+        .toolbar-btn:hover .btn-label {
+            max-width: 80px;
+            opacity: 1;
         }
 
         .send-btn {
@@ -331,6 +342,86 @@
             height: 18px;
             accent-color: var(--accent);
             cursor: pointer;
+        }
+
+        /* ─── Plus button & menu ─── */
+        .plus-btn {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+
+        .plus-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .plus-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chatbox-toolbar {
+            position: relative;
+        }
+
+        .plus-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 12px;
+            margin-top: 4px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+            z-index: 50;
+            min-width: 200px;
+        }
+
+        .plus-menu.open {
+            display: block;
+        }
+
+        .plus-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-primary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .plus-menu-item:hover {
+            background: var(--bg-secondary);
+        }
+
+        .plus-menu-item:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .plus-menu-item svg {
+            flex-shrink: 0;
+            color: var(--text-secondary);
         }
 
         /* ─── Suggestion chips ─── */
@@ -461,15 +552,14 @@
 
         /* ─── Assistant response bubbles ─── */
         .results-message {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 10px 14px;
+            align-items: center;
         }
 
         .response-row {
-            display: flex;
-            align-items: center;
-            gap: 14px;
+            display: contents;
         }
 
         .assistant-message {
@@ -480,16 +570,6 @@
             font-size: 16px;
             line-height: 1.4;
             word-break: break-word;
-            flex-shrink: 0;
-            max-width: 45%;
-        }
-
-        .response-frequency {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
         }
 
         .freq-bar-track {
@@ -568,8 +648,9 @@
                 font-size: 15px;
             }
 
-            .toolbar-btn .btn-label {
-                display: none;
+            .toolbar-btn:hover .btn-label {
+                max-width: 0;
+                opacity: 0;
             }
 
             .user-message {
@@ -661,7 +742,6 @@
         <div id="homeState">
             <div class="hero">
                 <h1>What do you want to test?</h1>
-                <p>Enter a prompt and see how consistently an LLM responds across multiple runs</p>
             </div>
 
             <div class="chatbox" id="homeChatbox">
@@ -678,18 +758,25 @@
                 </div>
                 <textarea id="homePrompt" placeholder="Enter your prompt..." rows="1"></textarea>
                 <div class="chatbox-toolbar">
-                    <button type="button" class="toolbar-btn" onclick="toggleSettings('home')" title="Settings">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    <div class="plus-menu" id="homePlusMenu">
+                        <button type="button" class="plus-menu-item enhance-btn" onclick="enhanceFromMenu()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
+                                <circle cx="15" cy="9" r="3"/>
+                            </svg>
+                            <span>Enhance prompt</span>
+                        </button>
+                        <button type="button" class="plus-menu-item" onclick="openSettings('home')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                    <button type="button" class="plus-btn" onclick="togglePlusMenu('home')" title="More options">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
-                        <span class="btn-label">Settings</span>
-                    </button>
-                    <button type="button" class="toolbar-btn enhance-btn" onclick="enhancePrompt()" title="Enhance for one-word answers">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
-                            <circle cx="15" cy="9" r="3"/>
-                        </svg>
-                        <span class="btn-label">Enhance</span>
                     </button>
                     <div class="spacer"></div>
                     <button type="button" class="send-btn" onclick="submitTest()" title="Send">
@@ -701,10 +788,13 @@
             </div>
 
             <div class="suggestion-chips">
-                <button class="chip" onclick="submitChip('What is the best type of cheese?')">Best cheese?</button>
-                <button class="chip" onclick="submitChip('What color is the sky?')">Sky color</button>
-                <button class="chip" onclick="submitChip('What is the best programming language?')">Best language?</button>
-                <button class="chip" onclick="submitChip('What is the meaning of life?')">Meaning of life</button>
+                <button class="chip" onclick="submitChip('What is the best type of cheese?')">Best cheese</button>
+                <button class="chip" onclick="submitChip('What is the most underrated fruit?')">Underrated fruit</button>
+                <button class="chip" onclick="submitChip('What word sounds the funniest?')">Funniest sounding word</button>
+                <button class="chip" onclick="submitChip('What is the most useless invention?')">Most useless invention</button>
+                <button class="chip" onclick="submitChip('What animal would make the worst pet?')">Worst pet</button>
+                <button class="chip" onclick="submitChip('What is the strangest sport?')">Strangest sport</button>
+                <button class="chip" onclick="submitChip('What is the most forgettable color?')">Most forgettable color</button>
             </div>
         </div>
 
@@ -730,18 +820,25 @@
                     </div>
                     <textarea id="convPrompt" placeholder="Enter your prompt..." rows="1"></textarea>
                     <div class="chatbox-toolbar">
-                        <button type="button" class="toolbar-btn" onclick="toggleSettings('conv')" title="Settings">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        <div class="plus-menu" id="convPlusMenu">
+                            <button type="button" class="plus-menu-item enhance-btn" onclick="enhanceFromMenu()">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
+                                    <circle cx="15" cy="9" r="3"/>
+                                </svg>
+                                <span>Enhance prompt</span>
+                            </button>
+                            <button type="button" class="plus-menu-item" onclick="openSettings('conv')">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                <span>Settings</span>
+                            </button>
+                        </div>
+                        <button type="button" class="plus-btn" onclick="togglePlusMenu('conv')" title="More options">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                             </svg>
-                            <span class="btn-label">Settings</span>
-                        </button>
-                        <button type="button" class="toolbar-btn enhance-btn" onclick="enhancePrompt()" title="Enhance for one-word answers">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
-                                <circle cx="15" cy="9" r="3"/>
-                            </svg>
-                            <span class="btn-label">Enhance</span>
                         </button>
                         <div class="spacer"></div>
                         <button type="button" class="send-btn" onclick="submitTest()" title="Send">
@@ -811,17 +908,30 @@
         }
         syncSettings();
 
-        // ─── Toggle settings popover ───
-        function toggleSettings(which) {
-            const id = which === 'home' ? 'homeSettings' : 'convSettings';
-            const popover = document.getElementById(id);
-            popover.classList.toggle('open');
+        // ─── Plus menu ───
+        function togglePlusMenu(which) {
+            const id = which === 'home' ? 'homePlusMenu' : 'convPlusMenu';
+            const menu = document.getElementById(id);
+            const wasOpen = menu.classList.contains('open');
+            closeAllPopovers();
+            if (!wasOpen) menu.classList.add('open');
         }
 
-        // Close settings when clicking outside
+        function openSettings(which) {
+            closeAllPopovers();
+            const id = which === 'home' ? 'homeSettings' : 'convSettings';
+            document.getElementById(id).classList.add('open');
+        }
+
+        function closeAllPopovers() {
+            document.querySelectorAll('.plus-menu, .settings-popover').forEach(p => p.classList.remove('open'));
+        }
+
+        // Close popovers when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.settings-popover') && !e.target.closest('.toolbar-btn[title="Settings"]')) {
-                document.querySelectorAll('.settings-popover').forEach(p => p.classList.remove('open'));
+            if (!e.target.closest('.plus-menu') && !e.target.closest('.plus-btn') &&
+                !e.target.closest('.settings-popover')) {
+                closeAllPopovers();
             }
         });
 
@@ -855,10 +965,7 @@
 
         // ─── Update send buttons ───
         function updateSendButtons(disabled) {
-            document.querySelectorAll('.send-btn').forEach(btn => {
-                btn.disabled = disabled;
-            });
-            document.querySelectorAll('.enhance-btn').forEach(btn => {
+            document.querySelectorAll('.send-btn, .plus-btn').forEach(btn => {
                 btn.disabled = disabled;
             });
         }
@@ -892,16 +999,14 @@
             })).sort((a, b) => b.count - a.count);
 
             let rowsHTML = sorted.map(item => {
-                const pct = ((item.count / total) * 100).toFixed(1);
+                const pct = ((item.count / total) * 100).toFixed(1).replace(/\.0$/, '');
                 return `
                     <div class="response-row">
                         <div class="assistant-message">${escapeHtml(item.label)}</div>
-                        <div class="response-frequency">
-                            <div class="freq-bar-track">
-                                <div class="freq-bar-fill" data-width="${pct}"></div>
-                            </div>
-                            <span class="freq-label">${pct}%</span>
+                        <div class="freq-bar-track">
+                            <div class="freq-bar-fill" data-width="${pct}"></div>
                         </div>
+                        <span class="freq-label">${pct}%</span>
                     </div>
                 `;
             }).join('');
@@ -1016,6 +1121,11 @@
         }
 
         // ─── Enhance prompt ───
+        function enhanceFromMenu() {
+            closeAllPopovers();
+            enhancePrompt();
+        }
+
         async function enhancePrompt() {
             if (state.isLoading) return;
 
@@ -1023,15 +1133,12 @@
             const prompt = input.value.trim();
 
             if (!prompt) {
-                input.placeholder = 'Enter a prompt first, then click to enhance';
+                input.placeholder = 'Enter a prompt first, then enhance';
                 return;
             }
 
-            const enhanceBtns = document.querySelectorAll('.enhance-btn');
-            enhanceBtns.forEach(btn => {
-                btn.disabled = true;
-                btn.innerHTML = '<div class="btn-spinner"></div>';
-            });
+            state.isLoading = true;
+            updateSendButtons(true);
 
             try {
                 const response = await fetch('/enhance', {
@@ -1053,14 +1160,8 @@
             } catch (error) {
                 alert('Error enhancing prompt: ' + error.message);
             } finally {
-                const svgIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M15 4V2M15 16v-2M8 9h2M20 9h2M17.8 11.8L19 13M17.8 6.2L19 5M3 21l9-9M12.2 6.2L11 5"/>
-                    <circle cx="15" cy="9" r="3"/>
-                </svg><span class="btn-label">Enhance</span>`;
-                enhanceBtns.forEach(btn => {
-                    btn.disabled = false;
-                    btn.innerHTML = svgIcon;
-                });
+                state.isLoading = false;
+                updateSendButtons(false);
             }
         }
 

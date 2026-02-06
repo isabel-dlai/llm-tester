@@ -35,6 +35,5 @@ Type a prompt (or click a suggestion chip), choose a model from the top-right dr
 - **30+ models** - OpenAI GPT-5/4/o-series and Anthropic Claude 4.5/4/3 families
 - **Parallel execution** - all iterations run concurrently for fast results
 - **Conversational UI** - ChatGPT-style interface with user/assistant bubbles
-- **Enhance button** - rewrites your prompt to force genuine one-word answers
-- **Settings** - configure iteration count and first-word-only mode via the toolbar
+- **"+" menu** - click the + button for Enhance (rewrites your prompt for one-word answers) and Settings (iteration count, first-word-only mode)
 - **Response normalization** - lowercase, strip punctuation, normalize whitespace for accurate aggregation
