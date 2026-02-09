@@ -8,7 +8,11 @@ from collections import Counter
 import re
 import string
 
+from pathlib import Path
+
+# Load .env from current dir, then parent dir (for shared API keys)
 load_dotenv()
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 app = Flask(__name__)
 
@@ -78,7 +82,7 @@ async def call_anthropic(model, temperature, system_message, prompt):
 
 async def run_parallel_requests(model, temperature, prompt, iterations, is_openai):
     """Run all API requests in parallel."""
-    system_message = "You are a helpful assistant. Follow the user's instructions precisely. Be concise."
+    system_message = "You are a helpful assistant. Respond with only one word or a very short phrase (2-3 words max). Never explain, elaborate, or add caveats. Just give the direct, concise answer."
 
     if is_openai:
         tasks = [
@@ -94,13 +98,57 @@ async def run_parallel_requests(model, temperature, prompt, iterations, is_opena
     return await asyncio.gather(*tasks)
 
 
+@app.route("/enhance", methods=["POST"])
+def enhance_prompt():
+    """Use GPT-5.2 to add constraints that force a genuine one-word answer."""
+    data = request.json
+    prompt = data.get("prompt", "")
+
+    if not prompt.strip():
+        return jsonify({"error": "No prompt provided"}), 400
+
+    try:
+        response = asyncio.run(openai_client.chat.completions.create(
+            model="gpt-5.2",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You add constraints to prompts to ensure the model gives a genuine one-word answer.
+
+Your job:
+1. Keep the original question exactly as-is
+2. Add a brief instruction at the end that:
+   - Requires a one-word answer
+   - Specifies what TYPE of word is expected (e.g., "must be a cheese name", "must be a country", "must be a color")
+   - Prevents cop-out answers like "subjective", "impossible", "depends", "none", etc.
+
+Examples:
+- "What's the best cheese?" → "What's the best cheese? Answer with one word. Your answer must be the name of an actual cheese."
+- "What color is the sky?" → "What color is the sky? Answer with one word. Your answer must be a color."
+- "Who is the greatest basketball player?" → "Who is the greatest basketball player? Answer with one word. Your answer must be a person's name (first or last name)."
+- "What's the best programming language?" → "What's the best programming language? Answer with one word. Your answer must be the name of a programming language."
+
+Output ONLY the enhanced prompt, nothing else."""
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        ))
+        enhanced = response.choices[0].message.content.strip()
+        return jsonify({"enhanced": enhanced})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/test", methods=["POST"])
 def test_prompt():
     data = request.json
     prompt = data.get("prompt", "")
     iterations = int(data.get("iterations", 10))
-    model = data.get("model", "gpt-4o-mini")
-    temperature = float(data.get("temperature", 1.0))
+    model = data.get("model", "gpt-5.2")
+    temperature = 1.0  # Fixed temperature for consistency testing
 
     normalize_options = {
         "strip_punctuation": True,
@@ -110,7 +158,6 @@ def test_prompt():
     }
 
     iterations = max(1, min(500, iterations))
-    temperature = max(0, min(1, temperature))
 
     is_openai = model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3") or model.startswith("o4")
 
